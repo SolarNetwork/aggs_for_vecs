@@ -60,5 +60,11 @@ load test_helper
 @test "string max" {
   run query "SELECT vec_to_max(vals) FROM (VALUES (ARRAY['a']), (ARRAY['b'])) t(vals)"
   echo ${lines}
-  [ "${lines[0]}" = "ERROR:  vec_to_max input must be array of SMALLINT, INTEGER, BIGINT, REAL, or DOUBLE PRECISION" ]
+  [ "${lines[0]}" = "ERROR:  vec_to_max input must be array of SMALLINT, INTEGER, BIGINT, REAL, DOUBLE PRECISION, or NUMERIC" ]
+}
+
+@test "numeric max" {
+  result="$(query "SELECT vec_to_max(vals) FROM (VALUES (ARRAY['1.23'::numeric, '2.34'::numeric, NULL]), (ARRAY['3.45'::numeric, '1.23', NULL]), (ARRAY['4.56'::numeric, NULL, NULL])) t(vals)")";
+  echo $result;
+  [ "$result" = "{4.56,2.34,NULL}" ]
 }
