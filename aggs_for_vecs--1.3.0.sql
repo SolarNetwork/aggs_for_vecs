@@ -40,6 +40,41 @@ LANGUAGE c;
 
 
 
+-- vec_sub
+
+CREATE OR REPLACE FUNCTION
+vec_sub(smallint[], smallint[])
+RETURNS smallint[]
+AS 'aggs_for_vecs', 'vec_sub'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_sub(int[], int[])
+RETURNS int[]
+AS 'aggs_for_vecs', 'vec_sub'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_sub(bigint[], bigint[])
+RETURNS bigint[]
+AS 'aggs_for_vecs', 'vec_sub'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_sub(real[], real[])
+RETURNS real[]
+AS 'aggs_for_vecs', 'vec_sub'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_sub(float[], float[])
+RETURNS float[]
+AS 'aggs_for_vecs', 'vec_sub'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_sub(numeric[], numeric[])
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_sub'
+LANGUAGE c;
+
+
+
 -- vec_trim_scale
 
 CREATE OR REPLACE FUNCTION
@@ -50,7 +85,7 @@ LANGUAGE c;
 
 
 
--- vec_without_outliers
+-- vec_sub
 
 CREATE OR REPLACE FUNCTION
 vec_without_outliers(smallint[], smallint[], smallint[])
