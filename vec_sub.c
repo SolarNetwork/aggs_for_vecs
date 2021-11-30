@@ -5,8 +5,8 @@ PG_FUNCTION_INFO_V1(vec_sub);
 /**
  * Subtract elements of two arrays.
  *
- * This function takes two array of n-elements and returns an array of
- * n-elements where each element is difference between the input elements
+ * This function takes two arrays of n-elements and returns an array of
+ * n-elements where each element is the difference between the input elements
  * of the same index.
  */
 Datum
@@ -92,7 +92,11 @@ vec_sub(PG_FUNCTION_ARGS)
         retContent[i] = Float8GetDatum(DatumGetFloat8(leftContent[i]) - DatumGetFloat8(rightContent[i]));
         break;
       case NUMERICOID:
+#if PG_VERSION_NUM < 120000
         retContent[i] = DirectFunctionCall2(numeric_sub, leftContent[i], rightContent[i]);
+#else
+        retContent[i] = NumericGetDatum(numeric_sub_opt_error(DatumGetNumeric(leftContent[i]), DatumGetNumeric(rightContent[i]), NULL));
+#endif
         break;
     }
   }
