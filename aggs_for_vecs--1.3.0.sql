@@ -40,6 +40,41 @@ LANGUAGE c;
 
 
 
+-- vec_add
+
+CREATE OR REPLACE FUNCTION
+vec_add(smallint[], smallint[])
+RETURNS smallint[]
+AS 'aggs_for_vecs', 'vec_add'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_add(int[], int[])
+RETURNS int[]
+AS 'aggs_for_vecs', 'vec_add'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_add(bigint[], bigint[])
+RETURNS bigint[]
+AS 'aggs_for_vecs', 'vec_add'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_add(real[], real[])
+RETURNS real[]
+AS 'aggs_for_vecs', 'vec_add'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_add(float[], float[])
+RETURNS float[]
+AS 'aggs_for_vecs', 'vec_add'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_add(numeric[], numeric[])
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_add'
+LANGUAGE c;
+
+
+
 -- vec_sub
 
 CREATE OR REPLACE FUNCTION
