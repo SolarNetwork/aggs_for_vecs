@@ -30,6 +30,12 @@ load test_helper
   [ "$result" = "{-2.3,0,2.3}" ]
 }
 
+@test "numeric sub" {
+  result="$(query "SELECT vec_sub(ARRAY[1.23,2.234,3.456]::numeric[], ARRAY[3.456,2.234,1.123]::numeric[])")";
+  echo $result;
+  [ "$result" = "{-2.226,0.000,2.333}" ]
+}
+
 @test "numeric sub measurements" {
   result="$(query "SELECT diff FROM (SELECT vec_sub(nums, lag(nums) OVER (ORDER BY sensor_id)) AS diff FROM measurements d WHERE sensor_id IN (3,4)) d WHERE d.diff IS NOT NULL")";
   echo $result;
