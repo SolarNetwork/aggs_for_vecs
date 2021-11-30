@@ -98,6 +98,26 @@ Returns the [sample variance](http://www.statisticshowto.com/how-to-find-the-sam
 The code is very similar to [the built-in `var_samp` function](https://www.postgresql.org/docs/current/static/functions-aggregate.html),
 so if it works there it should work here (or it's a bug).
 
+#### `vec_add(ANYARRAY, ANYARRAY) RETURNS ANYARRAY`
+
+This is not an aggregate function, but returns each array position in the first argument added to
+the same position in the second argument.
+
+#### `vec_div(ANYARRAY, ANYARRAY) RETURNS ANYARRAY`
+
+This is not an aggregate function, but returns each array position in the first argument divided by
+the same position in the second argument.
+
+#### `vec_mul(ANYARRAY, ANYARRAY) RETURNS ANYARRAY`
+
+This is not an aggregate function, but returns each array position in the first argument multiplied by
+the same position in the second argument.
+
+#### `vec_sub(ANYARRAY, ANYARRAY) RETURNS ANYARRAY`
+
+This is not an aggregate function, but returns each array position in the second argument subtracted from
+the same position in the first argument.
+
 #### `vec_without_outliers(ANYARRAY, ANYARRAY, ANYARRAY) RETURNS ANYARRAY`
 
 This is not an aggregate function, but is useful to trim down the inputs to the other functions here.
