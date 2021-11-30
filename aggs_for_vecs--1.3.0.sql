@@ -85,7 +85,7 @@ LANGUAGE c;
 
 
 
--- vec_sub
+-- vec_without_outliers
 
 CREATE OR REPLACE FUNCTION
 vec_without_outliers(smallint[], smallint[], smallint[])
