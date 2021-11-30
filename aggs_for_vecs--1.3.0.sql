@@ -75,7 +75,7 @@ LANGUAGE c;
 
 
 
--- vec_add
+-- vec_div
 
 CREATE OR REPLACE FUNCTION
 vec_div(smallint[], smallint[])
@@ -106,6 +106,41 @@ CREATE OR REPLACE FUNCTION
 vec_div(numeric[], numeric[])
 RETURNS numeric[]
 AS 'aggs_for_vecs', 'vec_div'
+LANGUAGE c;
+
+
+
+-- vec_mul
+
+CREATE OR REPLACE FUNCTION
+vec_mul(smallint[], smallint[])
+RETURNS smallint[]
+AS 'aggs_for_vecs', 'vec_mul'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_mul(int[], int[])
+RETURNS int[]
+AS 'aggs_for_vecs', 'vec_mul'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_mul(bigint[], bigint[])
+RETURNS bigint[]
+AS 'aggs_for_vecs', 'vec_mul'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_mul(real[], real[])
+RETURNS real[]
+AS 'aggs_for_vecs', 'vec_mul'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_mul(float[], float[])
+RETURNS float[]
+AS 'aggs_for_vecs', 'vec_mul'
+LANGUAGE c;
+CREATE OR REPLACE FUNCTION
+vec_mul(numeric[], numeric[])
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_mul'
 LANGUAGE c;
 
 
