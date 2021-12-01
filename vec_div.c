@@ -92,7 +92,7 @@ vec_div(PG_FUNCTION_ARGS)
         retContent[i] = Float8GetDatum(DatumGetFloat8(leftContent[i]) / DatumGetFloat8(rightContent[i]));
         break;
       case NUMERICOID:
-        if (DirectFunctionCall2(numeric_cmp, rightContent[i], DirectFunctionCall1(int4_numeric, Int32GetDatum(0))) == 0) {
+        if (DatumGetInt32(DirectFunctionCall2(numeric_cmp, rightContent[i], DirectFunctionCall1(int4_numeric, Int32GetDatum(0)))) == 0) {
 #if PG_VERSION_NUM < 140000
           retContent[i] = DirectFunctionCall3(numeric_in, CStringGetDatum("NaN"),
 								  ObjectIdGetDatum(InvalidOid),
