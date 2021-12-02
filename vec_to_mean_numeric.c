@@ -53,6 +53,19 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
     arrayLength = (ARR_DIMS(currentArray))[0];
     // Just start with all NULLs and let the comparisons below replace them:
     state = initVecArrayResultWithNulls(elemTypeId, NUMERICOID, aggContext, arrayLength);
+
+    // lookup the numeric_avg_accum function and cache a FunctionCallInfo for it
+    // TODO: could move this into a function in util.c; maybe actually cache FmgrInfo once globally in _PG_init?
+    Oid proxyTransFnOid = fmgr_internal_function("numeric_avg_accum");
+    if (proxyTransFnOid == InvalidOid) {
+      ereport(ERROR, (errmsg("numeric_avg_accum function not found")));
+    }
+    fmgr_info_cxt(proxyTransFnOid, &state->vec_accum_flinfo, aggContext);
+    ereport(NOTICE, (errmsg("cached numeric_avg_accum FmgrInfo")));
+    state->vec_accum_fcinfo = MemoryContextAllocZero(aggContext,  SizeForFunctionCallInfo(2));
+    ereport(NOTICE, (errmsg("allocated vec_accum_fcinfo memory %lu", SizeForFunctionCallInfo(2))));
+    InitFunctionCallInfoData(*state->vec_accum_fcinfo, &state->vec_accum_flinfo, 2, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
+    ereport(NOTICE, (errmsg("init vec_accum_fcinfo struct")));
   } else {
     elemTypeId = state->inputElementType;
     arrayLength = state->state.nelems;
@@ -65,6 +78,9 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
     ereport(ERROR, (errmsg("All arrays must be the same length, but we got %d vs %d", currentLength, arrayLength)));
   }
 
+  state->vec_accum_fcinfo->args[0].isnull = PG_ARGISNULL(0);
+  state->vec_accum_fcinfo->args[1].isnull = false;
+
   old = MemoryContextSwitchTo(aggContext);
   for (i = 0; i < arrayLength; i++) {
     if (currentNulls[i]) {
@@ -73,19 +89,17 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
       if (state->state.dnulls[i]) {
         state->state.dnulls[i] = false;
       }
-      //state->veccounts[i] = 1;
-      //state->vecvalues[i].num = DatumGetNumericCopy(currentVals[i]);
-      state->vecvalues[i].datum = DirectFunctionCall2(numeric_avg_accum, state->vecvalues[i].datum, currentVals[i]);
-
-    /*} else {
-      //state->veccounts[i] += 1;
-      // instead of performing sub/div/add numeric calculations each row, just add and complete later in final function
-#if PG_VERSION_NUM < 120000
-      state->vecvalues[i].num = DatumGetNumeric(DirectFunctionCall2(numeric_add, NumericGetDatum(state->vecvalues[i].num), currentVals[i]));
-#else
-      state->vecvalues[i].num = numeric_add_opt_error(state->vecvalues[i].num, DatumGetNumeric(currentVals[i]), NULL);
-#endif
-*/
+      
+      state->vec_accum_fcinfo->args[0].value = state->vecvalues[i].datum;
+      state->vec_accum_fcinfo->args[1].value = currentVals[i];
+      state->vec_accum_fcinfo->isnull = false;
+      ereport(NOTICE, (errmsg("invoking trans %d", i)));
+      state->vecvalues[i].datum = FunctionCallInvoke(state->vec_accum_fcinfo);
+      if (state->vec_accum_fcinfo->isnull) {
+        // accumulator returned no state; make sure datum is NULL
+        ereport(NOTICE, (errmsg("trans %d returned NULL", i)));
+        state->vecvalues[i].datum = 0;
+      }
     }
   }
   MemoryContextSwitchTo(old);
@@ -103,6 +117,8 @@ vec_to_mean_numeric_finalfn(PG_FUNCTION_ARGS)
   int dims[1];
   int lbs[1];
   int i;
+  Oid proxyFinalFnOid;
+  FmgrInfo proxyFinalFnInfo;
   Datum count;
   Datum div;
 
@@ -113,22 +129,35 @@ vec_to_mean_numeric_finalfn(PG_FUNCTION_ARGS)
   if (state == NULL)
     PG_RETURN_NULL();
 
+  proxyFinalFnOid = fmgr_internal_function("numeric_avg");
+  if (proxyFinalFnOid == InvalidOid) {
+    ereport(ERROR, (errmsg("numeric_avg function not found")));
+  }
+  fmgr_info(proxyFinalFnOid, &proxyFinalFnInfo);
+
+  ereport(NOTICE, (errmsg("about to do create proxy_fcinfo")));
+  LOCAL_FCINFO(proxy_fcinfo, 1);
+  fmgr_info(proxyFinalFnOid, &proxyFinalFnInfo);
+  ereport(NOTICE, (errmsg("created proxy_fcinfo")));
+  InitFunctionCallInfoData(*proxy_fcinfo, &proxyFinalFnInfo, 1, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
+  ereport(NOTICE, (errmsg("init proxy_fcinfo")));
+
   // Convert from our pgnums to Datums:
   for (i = 0; i < state->state.nelems; i++) {
     if (state->state.dnulls[i]) continue;
-    div = DirectFunctionCall1(numeric_sum, state->vecvalues[i].datum);
-    /*
-    count = DirectFunctionCall1(int8_numeric, UInt32GetDatum(state->veccounts[i]));
-#if PG_VERSION_NUM < 120000
-    div = DirectFunctionCall2(numeric_div, NumericGetDatum(state->vecvalues[i].num), count);
-#else
-    div = NumericGetDatum(numeric_div_opt_error(state->vecvalues[i].num, DatumGetNumeric(count), NULL));
-#endif
-  */
+    proxy_fcinfo->args[0].isnull = (state->vecvalues[i].datum != 0);
+    proxy_fcinfo->args[0].value = state->vecvalues[i].datum;
+    proxy_fcinfo->isnull = false;
+    ereport(NOTICE, (errmsg("invoking final %d", i)));
+    div = FunctionCallInvoke(proxy_fcinfo);
+    if (proxy_fcinfo->isnull) {
+      ereport(ERROR, (errmsg("numeric_avg returned NULL")));
+    }
+    ereport(NOTICE, (errmsg("out[%d] = %s", i, DatumGetCString(DirectFunctionCall1(numeric_out, div)))));
     state->state.dvalues[i] = div;
-    
   }
 
+  ereport(NOTICE, (errmsg("all invocations complete")));
   dims[0] = state->state.nelems;
   lbs[0] = 1;
 
