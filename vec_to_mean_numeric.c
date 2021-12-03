@@ -54,15 +54,8 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
     // Just start with all NULLs and let the comparisons below replace them:
     state = initVecArrayResultWithNulls(elemTypeId, NUMERICOID, aggContext, arrayLength);
 
-    // lookup the numeric_avg_accum function and cache a FunctionCallInfo for it
-    // TODO: could move this into a function in util.c; maybe actually cache FmgrInfo once globally in _PG_init?
-    Oid proxyTransFnOid = fmgr_internal_function("numeric_avg_accum");
-    if (proxyTransFnOid == InvalidOid) {
-      ereport(ERROR, (errmsg("numeric_avg_accum function not found")));
-    }
-    fmgr_info_cxt(proxyTransFnOid, &state->vec_accum_flinfo, aggContext);
     state->vec_accum_fcinfo = MemoryContextAllocZero(aggContext,  SizeForFunctionCallInfo(2));
-    InitFunctionCallInfoData(*state->vec_accum_fcinfo, &state->vec_accum_flinfo, 2, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
+    InitFunctionCallInfoData(*state->vec_accum_fcinfo, &numeric_avg_accum_fmgrinfo, 2, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
   } else {
     elemTypeId = state->inputElementType;
     arrayLength = state->state.nelems;
@@ -112,8 +105,6 @@ vec_to_mean_numeric_finalfn(PG_FUNCTION_ARGS)
   int dims[1];
   int lbs[1];
   int i;
-  Oid proxyFinalFnOid;
-  FmgrInfo proxyFinalFnInfo;
   Datum div;
 
   Assert(AggCheckCallContext(fcinfo, NULL));
@@ -123,16 +114,8 @@ vec_to_mean_numeric_finalfn(PG_FUNCTION_ARGS)
   if (state == NULL)
     PG_RETURN_NULL();
 
-  // TODO: should we just do this once in _PG_init?
-  proxyFinalFnOid = fmgr_internal_function("numeric_avg");
-  if (proxyFinalFnOid == InvalidOid) {
-    ereport(ERROR, (errmsg("numeric_avg function not found")));
-  }
-  fmgr_info(proxyFinalFnOid, &proxyFinalFnInfo);
-
   LOCAL_FCINFO(proxy_fcinfo, 1);
-  fmgr_info(proxyFinalFnOid, &proxyFinalFnInfo);
-  InitFunctionCallInfoData(*proxy_fcinfo, &proxyFinalFnInfo, 1, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
+  InitFunctionCallInfoData(*proxy_fcinfo, &numeric_avg_fmgrinfo, 1, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
 
   // Convert from our pgnums to Datums:
   for (i = 0; i < state->state.nelems; i++) {

@@ -31,7 +31,6 @@ typedef struct VecArrayBuildState {
   pgnum *vecvalues;     // The current aggregate result for each position.
   uint32 *veccounts;    // How many values in this position are not null.
   pgnum *vectmpvalues;  // Intermediate results if we need them.
-  FmgrInfo vec_accum_flinfo;
   FunctionCallInfo vec_accum_fcinfo;
 } VecArrayBuildState;
 
