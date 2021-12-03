@@ -145,7 +145,7 @@ vec_to_mean_numeric_finalfn(PG_FUNCTION_ARGS)
   // Convert from our pgnums to Datums:
   for (i = 0; i < state->state.nelems; i++) {
     if (state->state.dnulls[i]) continue;
-    proxy_fcinfo->args[0].isnull = (state->vecvalues[i].datum != 0);
+    proxy_fcinfo->args[0].isnull = (state->vecvalues[i].datum == 0);
     proxy_fcinfo->args[0].value = state->vecvalues[i].datum;
     proxy_fcinfo->isnull = false;
     ereport(NOTICE, (errmsg("invoking final %d", i)));
