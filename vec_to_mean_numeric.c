@@ -68,7 +68,6 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
     ereport(ERROR, (errmsg("All arrays must be the same length, but we got %d vs %d", currentLength, arrayLength)));
   }
 
-  state->vec_accum_fcinfo->args[0].isnull = PG_ARGISNULL(0);
   state->vec_accum_fcinfo->args[1].isnull = false;
 
   old = MemoryContextSwitchTo(aggContext);
@@ -78,6 +77,9 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
     } else {
       if (state->state.dnulls[i]) {
         state->state.dnulls[i] = false;
+        state->vec_accum_fcinfo->args[0].isnull = true;
+      } else {
+        state->vec_accum_fcinfo->args[0].isnull = false;
       }
       
       state->vec_accum_fcinfo->args[0].value = state->vecvalues[i].datum;
@@ -85,8 +87,9 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
       state->vec_accum_fcinfo->isnull = false;
       state->vecvalues[i].datum = FunctionCallInvoke(state->vec_accum_fcinfo);
       if (state->vec_accum_fcinfo->isnull) {
-        // accumulator returned no state; make sure datum is NULL
-        state->vecvalues[i].datum = 0;
+        // accumulator returned no state
+        ereport(ERROR, (errmsg("The numeric_avg_accum function returned a NULL aggregate state when invoked with %s",
+          DatumGetCString(DirectFunctionCall1(numeric_out, currentVals[i])))));
       }
     }
   }
