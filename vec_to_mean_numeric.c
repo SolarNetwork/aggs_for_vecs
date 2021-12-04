@@ -24,7 +24,6 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
   Datum *currentVals;
   bool *currentNulls;
   int i;
-  MemoryContext old;
 
   if (!AggCheckCallContext(fcinfo, &aggContext)) {
     elog(ERROR, "vec_to_mean_numeric_transfn called in non-aggregate context");
@@ -70,7 +69,6 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
 
   state->vec_accum_fcinfo->args[1].isnull = false;
 
-  old = MemoryContextSwitchTo(aggContext);
   for (i = 0; i < arrayLength; i++) {
     if (currentNulls[i]) {
       // do nothing: nulls can't change the result.
@@ -93,7 +91,6 @@ vec_to_mean_numeric_transfn(PG_FUNCTION_ARGS)
       }
     }
   }
-  MemoryContextSwitchTo(old);
   PG_RETURN_POINTER(state);
 }
 
