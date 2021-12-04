@@ -2,9 +2,11 @@
 *.so
 .*.swp
 .*.swo
+.DS_Store
 /.vscode
 /bench-results.txt
 /bench-report.txt
 /aggs_for_vecs*.zip
 /regression.*
 /results
+/test
