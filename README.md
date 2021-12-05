@@ -92,6 +92,12 @@ Returns the maximum in each array position.
 
 Returns the average (mean) in each array position.
 
+#### `vec_to_weighted_mean(ANYARRAY, ANYARRAY) RETURNS FLOAT[]`
+
+Returns the weighted average (mean) in each array position,
+using the first parameter for the values and the second for the weights.
+The two arrays should have the same length.
+
 #### `vec_to_var_samp(ANYARRAY) RETURNS FLOAT[]`
 
 Returns the [sample variance](http://www.statisticshowto.com/how-to-find-the-sample-variance-and-standard-deviation-in-statistics/) in each array position.
@@ -152,6 +158,11 @@ provided by this extension.
 Return an array with the same elements as the given array, but extended to have the length of the second
 argument if necessary. Any added elements will be set to `NULL`. If the given array is already the given
 length, it is returned directly.
+
+### `vec_coalesce(ANYARRAY, ANYELEMENT) RETURNS ANYARRAY`
+
+Return an array with the same elements as the given array, execept all `NULL` elements are replaced
+by the given second argument.
 
 #### `vec_trim_scale(NUMERIC[]) RETURNS NUMERIC[]`
 

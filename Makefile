@@ -8,6 +8,7 @@ REGRESS = setup \
 					hist_md \
 					pad_vec \
 					vec_add \
+					vec_coalesce \
 					vec_div \
 					vec_mul \
 					vec_pow \
@@ -18,6 +19,7 @@ REGRESS = setup \
 					vec_to_min \
 					vec_to_sum \
 					vec_to_var_samp \
+					vec_to_weighted_mean \
 					vec_trim_scale \
 					vec_without_outliers
 
