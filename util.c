@@ -32,6 +32,16 @@ typedef struct VecArrayBuildState {
   pgnum *vectmpvalues;  // Intermediate results if we need them.
 } VecArrayBuildState;
 
+typedef struct VecAggAccumState {
+  ArrayBuildState state;
+  Oid inputElementType;
+  Datum *vec_states;               // Element aggregate state.
+  Datum *vec_mins;                 // Element min value seen.
+  Datum *vec_maxes;                // Element max value seen.
+  uint32 *vec_counts;              // Element non-null count.
+  FunctionCallInfo transfn_fcinfo; // Cached function call for invoking aggregate function.
+  FunctionCallInfo cmp_fcinfo;     // Cached function call for invoking comparison function.
+} VecAggAccumState;
 
 VecArrayBuildState *
 initVecArrayResultWithNulls(Oid input_element_type, Oid state_element_type, MemoryContext rcontext, int arLen);
@@ -62,6 +72,47 @@ initVecArrayResultWithNulls(Oid input_element_type, Oid state_element_type, Memo
   memset(astate->veccounts, 0, astate->state.alen * sizeof(uint32));
   astate->vectmpvalues = (pgnum *)
     MemoryContextAlloc(rcontext, astate->state.alen * sizeof(pgnum));
+  
+  astate->state.nelems = arLen;
+  astate->state.element_type = state_element_type;
+  get_typlenbyvalalign(state_element_type,
+      &astate->state.typlen,
+      &astate->state.typbyval,
+      &astate->state.typalign);
+
+  return astate;
+}
+
+VecAggAccumState *
+initVecAggAccumStateWithNulls(Oid input_element_type, Oid state_element_type, MemoryContext rcontext, int arLen);
+
+VecAggAccumState *
+initVecAggAccumStateWithNulls(Oid input_element_type, Oid state_element_type, MemoryContext rcontext, int arLen) {
+  VecAggAccumState *astate;
+  int i;
+
+  astate = (VecAggAccumState *)MemoryContextAlloc(rcontext, sizeof(VecAggAccumState));
+  astate->state.mcontext = rcontext;
+#if PG_VERSION_NUM >= 90500
+  astate->state.private_cxt = false;
+#endif
+  astate->state.alen = arLen;
+  astate->state.dvalues = (Datum *)
+    MemoryContextAlloc(rcontext, astate->state.alen * sizeof(Datum));
+  astate->state.dnulls = (bool *)
+    MemoryContextAlloc(rcontext, astate->state.alen * sizeof(bool));
+  for (i = 0; i < arLen; i++) {
+    astate->state.dnulls[i] = true;
+  }
+  astate->inputElementType = input_element_type;
+  astate->vec_states = (Datum *)
+    MemoryContextAllocZero(rcontext, astate->state.alen * sizeof(Datum));
+  astate->vec_mins = (Datum *)
+    MemoryContextAllocZero(rcontext, astate->state.alen * sizeof(Datum));
+  astate->vec_maxes = (Datum *)
+    MemoryContextAllocZero(rcontext, astate->state.alen * sizeof(Datum));
+  astate->vec_counts = (uint32 *)
+    MemoryContextAllocZero(rcontext, astate->state.alen * sizeof(uint32));
   
   astate->state.nelems = arLen;
   astate->state.element_type = state_element_type;

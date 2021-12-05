@@ -32,6 +32,7 @@ static Datum NUMERIC_ONE;
 // some cached function infos to speed up numeric operations
 static FmgrInfo numeric_avg_accum_fmgrinfo;
 static FmgrInfo numeric_avg_fmgrinfo;
+static FmgrInfo numeric_cmp_fmgrinfo;
 
 void
 _PG_init(void)
@@ -44,6 +45,8 @@ _PG_init(void)
   // cache function lookups for faster use later
   fmgr_info(fmgr_internal_function("numeric_avg_accum"), &numeric_avg_accum_fmgrinfo);
   fmgr_info(fmgr_internal_function("numeric_avg"), &numeric_avg_fmgrinfo);
+  fmgr_info(fmgr_internal_function("numeric_cmp"), &numeric_cmp_fmgrinfo);
+  // TODO: numeric_accum for *_samp style aggregates
   
   MemoryContextSwitchTo(old);
 }
@@ -68,6 +71,7 @@ _PG_fini(void)
 #include "vec_coalesce.c"
 #include "vec_trim_scale.c"
 #include "vec_without_outliers.c"
+#include "vec_stat_agg.c"
 #include "vec_to_count.c"
 #include "vec_to_sum.c"
 #include "vec_to_mean.c"
