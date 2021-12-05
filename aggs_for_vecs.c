@@ -29,6 +29,10 @@ _PG_fini(void);
 static Datum NUMERIC_ZERO;
 static Datum NUMERIC_ONE;
 
+// some cached function infos to speed up numeric operations
+static FmgrInfo numeric_avg_accum_fmgrinfo;
+static FmgrInfo numeric_avg_fmgrinfo;
+
 void
 _PG_init(void)
 {
@@ -36,6 +40,11 @@ _PG_init(void)
   old = MemoryContextSwitchTo(TopMemoryContext);
   NUMERIC_ZERO = DirectFunctionCall1(int4_numeric, Int32GetDatum(0));
   NUMERIC_ONE = DirectFunctionCall1(int4_numeric, Int32GetDatum(1));
+ 
+  // cache function lookups for faster use later
+  fmgr_info(fmgr_internal_function("numeric_avg_accum"), &numeric_avg_accum_fmgrinfo);
+  fmgr_info(fmgr_internal_function("numeric_avg"), &numeric_avg_fmgrinfo);
+  
   MemoryContextSwitchTo(old);
 }
 
