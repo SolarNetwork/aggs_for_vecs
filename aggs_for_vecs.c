@@ -1,5 +1,6 @@
 #include <postgres.h>
 #include <fmgr.h>
+#include <libpq/pqformat.h>
 #include <catalog/pg_type.h>
 #include <utils/datum.h>
 #include <utils/array.h>
@@ -62,6 +63,7 @@ _PG_fini(void)
 }
 
 #include "util.c"
+#include "stats.c"
 #include "pad_vec.c"
 #include "vec_add.c"
 #include "vec_sub.c"
@@ -72,6 +74,7 @@ _PG_fini(void)
 #include "vec_trim_scale.c"
 #include "vec_without_outliers.c"
 #include "vec_stat_agg.c"
+#include "vec_agg_count.c"
 #include "vec_to_count.c"
 #include "vec_to_sum.c"
 #include "vec_to_mean.c"

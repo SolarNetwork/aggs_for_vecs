@@ -1,13 +1,13 @@
 
-Datum vec_stat_agg(PG_FUNCTION_ARGS);
-PG_FUNCTION_INFO_V1(vec_stat_agg);
+Datum vec_stat_agg_transfn(PG_FUNCTION_ARGS);
+PG_FUNCTION_INFO_V1(vec_stat_agg_transfn);
 
 /**
  * Aggregate transition function for accumulating basic statistics via
  * delegate aggregate transition function and comparison functions.
  */
 Datum
-vec_stat_agg(PG_FUNCTION_ARGS)
+vec_stat_agg_transfn(PG_FUNCTION_ARGS)
 {
   Oid elemTypeId;
   int16 elemTypeWidth;
@@ -43,7 +43,7 @@ vec_stat_agg(PG_FUNCTION_ARGS)
       ereport(ERROR, (errmsg("One-dimensional arrays are required")));
     }
     arrayLength = (ARR_DIMS(currentArray))[0];
-    state = initVecAggAccumStateWithNulls(elemTypeId, elemTypeId, aggContext, arrayLength);
+    state = initVecAggAccumStateWithNulls(elemTypeId, aggContext, arrayLength);
 
     // Set up the delegate aggregate transition/compare function calls
     state->transfn_fcinfo = MemoryContextAllocZero(aggContext,  SizeForFunctionCallInfo(2));
@@ -59,8 +59,8 @@ vec_stat_agg(PG_FUNCTION_ARGS)
         elog(ERROR, "Unknown array element type");
     }
   } else {
-    elemTypeId = state->inputElementType;
-    arrayLength = state->state.nelems;
+    elemTypeId = state->elementType;
+    arrayLength = state->nelems;
   }
 
   get_typlenbyvalalign(elemTypeId, &elemTypeWidth, &elemTypeByValue, &elemTypeAlignmentCode);
@@ -80,12 +80,8 @@ vec_stat_agg(PG_FUNCTION_ARGS)
     if (currentNulls[i]) {
       // do nothing: nulls can't change the result.
     } else {
-      // increment non-null count
-      state->vec_counts[i]++;
-
-      if (state->state.dnulls[i]) {
+      if (state->vec_counts[i] < 1) {
         // first non-null element; we can use this as initial min/max values
-        state->state.dnulls[i] = false;
         state->vec_mins[i] = currentVals[i];
         state->vec_maxes[i] = currentVals[i];
         state->transfn_fcinfo->args[0].isnull = true;
@@ -117,6 +113,9 @@ vec_stat_agg(PG_FUNCTION_ARGS)
         }
       }
       
+      // increment non-null count
+      state->vec_counts[i]++;
+
       // execute delegate transition function
       state->transfn_fcinfo->args[0].value = state->vec_states[i];
       state->transfn_fcinfo->args[1].value = currentVals[i];
@@ -129,4 +128,54 @@ vec_stat_agg(PG_FUNCTION_ARGS)
     }
   }
   PG_RETURN_POINTER(state);
+}
+
+Datum vec_stat_agg_finalfn(PG_FUNCTION_ARGS);
+PG_FUNCTION_INFO_V1(vec_stat_agg_finalfn);
+
+// Return array of VecAggElementStats elements
+Datum
+vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
+{
+  VecAggAccumState *state;
+  Datum result;
+  ArrayBuildState *result_build;
+  Oid statsOid;
+  VecAggElementStats *stats;
+  int dims[1];
+  int lbs[1];
+  int i;
+  int16 elementTypeLen;
+  bool elementTypeByVal;
+  char elementTypeAlign;
+
+
+  Assert(AggCheckCallContext(fcinfo, NULL));
+
+  state = PG_ARGISNULL(0) ? NULL : (VecAggAccumState *)PG_GETARG_POINTER(0);
+
+  if (state == NULL)
+    PG_RETURN_NULL();
+
+  statsOid = 0; // TODO: how lookup OID of VecAggElementStats type?
+  result_build = initArrayResultWithNulls(statsOid, CurrentMemoryContext, state->nelems);
+
+  get_typlenbyvalalign(state->elementType, &elementTypeLen, &elementTypeByVal, &elementTypeAlign);
+
+  for (i = 0; i < state->nelems; i++) {
+    if (state->nelems < 1) continue;
+    stats = palloc(sizeof(VecAggElementStats));
+    stats->elementType = state->elementType;
+    stats->count = state->vec_counts[i];
+    stats->min = datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen);
+    stats->max = datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen);
+    stats->sum = 0; // TODO: extract sum out of stats->vec_states[i], i.e. call numeric_sum
+    result_build->dvalues[i] = 0; // TODO: VecAggElementStatsGetDatum(stats);
+    //TODO: result_build->dnulls[i] = false;
+  }
+
+  dims[0] = state->nelems;
+  lbs[0] = 1;
+  result = makeMdArrayResult(result_build, 1, dims, lbs, CurrentMemoryContext, false);
+  PG_RETURN_DATUM(result);
 }
