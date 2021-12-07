@@ -37,7 +37,7 @@ vec_agg_count(PG_FUNCTION_ARGS)
   result_build = initArrayResultWithNulls(elemTypeId, CurrentMemoryContext, statsLength);
 
   for (i = 0; i < statsLength; i++) {
-    VecAggElementStats *stats = NULL; // FIXME get from stats[i]
+    VecAggElementStatsType *stats = NULL; // FIXME get from stats[i]
     result_build->dvalues[i] = Int64GetDatum(stats->count);
   }
 

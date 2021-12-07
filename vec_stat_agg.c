@@ -27,9 +27,7 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
     elog(ERROR, "vec_stat_agg called in non-aggregate context");
   }
 
-  if (!PG_ARGISNULL(0)) {
-    state = (VecAggAccumState *)PG_GETARG_POINTER(0);
-  }
+  state = PG_ARGISNULL(0) ? NULL : (VecAggAccumState *)PG_GETARG_POINTER(0);
 
   if (PG_ARGISNULL(1)) {
     // just return the current state unchanged (possibly still NULL)
@@ -141,7 +139,7 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
   Datum result;
   ArrayBuildState *result_build;
   Oid statsOid;
-  VecAggElementStats *stats;
+  VecAggElementStatsType *stats;
   int dims[1];
   int lbs[1];
   int i;
@@ -157,21 +155,21 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
   if (state == NULL)
     PG_RETURN_NULL();
 
-  statsOid = 0; // TODO: how lookup OID of VecAggElementStats type?
+  statsOid = typenameTypeId(NULL, typeStringToTypeName("vecaggstats")); // TODO: CACHE in _PG_init how lookup OID of VecAggElementStats type?
   result_build = initArrayResultWithNulls(statsOid, CurrentMemoryContext, state->nelems);
 
   get_typlenbyvalalign(state->elementType, &elementTypeLen, &elementTypeByVal, &elementTypeAlign);
 
   for (i = 0; i < state->nelems; i++) {
     if (state->nelems < 1) continue;
-    stats = palloc(sizeof(VecAggElementStats));
-    stats->elementType = state->elementType;
+    stats = palloc(sizeof(VecAggElementStatsType));
+    stats->elemTypeId = state->elementType;
     stats->count = state->vec_counts[i];
     stats->min = datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen);
     stats->max = datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen);
     stats->sum = 0; // TODO: extract sum out of stats->vec_states[i], i.e. call numeric_sum
-    result_build->dvalues[i] = 0; // TODO: VecAggElementStatsGetDatum(stats);
-    //TODO: result_build->dnulls[i] = false;
+    result_build->dvalues[i] = VecAggElementStatsTypePGetDatum(stats);
+    result_build->dnulls[i] = false;
   }
 
   dims[0] = state->nelems;

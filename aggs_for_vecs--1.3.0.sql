@@ -1289,3 +1289,56 @@ vec_pow(anyelement, anyarray)
 RETURNS anyarray
 AS 'aggs_for_vecs', 'vec_pow_with_scalar'
 LANGUAGE c;
+
+
+
+-- vecaggstats type
+
+CREATE TYPE vecaggstats;
+
+CREATE FUNCTION vecaggstats_in(cstring)
+    RETURNS vecaggstats
+    AS 'aggs_for_vecs'
+    LANGUAGE C IMMUTABLE STRICT;
+
+CREATE FUNCTION vecaggstats_out(vecaggstats)
+    RETURNS cstring
+    AS 'aggs_for_vecs'
+    LANGUAGE C IMMUTABLE STRICT;
+
+CREATE TYPE vecaggstats (
+    internallength = variable,
+    input = vecaggstats_in,
+    output = vecaggstats_out
+);
+
+-- vec_stat_agg
+
+CREATE OR REPLACE FUNCTION
+vec_stat_agg_transfn(internal, numeric[])
+RETURNS internal
+AS 'aggs_for_vecs', 'vec_stat_agg_transfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_stat_agg_finalfn(internal, numeric[])
+RETURNS vecaggstats[]
+AS 'aggs_for_vecs', 'vec_stat_agg_finalfn'
+LANGUAGE c;
+
+CREATE AGGREGATE vec_stat_agg(numeric[]) (
+  sfunc = vec_stat_agg_transfn,
+  stype = internal,
+  finalfunc = vec_stat_agg_finalfn,
+  finalfunc_extra
+);
+
+
+
+-- vec_agg_count
+
+CREATE OR REPLACE FUNCTION
+vec_agg_count(vecaggstats[])
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_count'
+LANGUAGE c STRICT;
