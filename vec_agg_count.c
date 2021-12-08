@@ -18,14 +18,15 @@ vec_agg_count(PG_FUNCTION_ARGS)
   int16 elemTypeWidth;
   bool elemTypeByValue;
   char elemTypeAlignmentCode;
+  VecAggElementStatsType *elemStats;
   int dims[1];
   int lbs[1];
   int i;
 
   stats = PG_ARGISNULL(0) ? NULL : PG_GETARG_ARRAYTYPE_P(0);
-
-  if (stats == NULL)
+  if (stats == NULL || ARR_NDIM(stats) == 0) {
     PG_RETURN_NULL();
+  }
 
   elemTypeId = ARR_ELEMTYPE(stats);
 
@@ -34,11 +35,13 @@ vec_agg_count(PG_FUNCTION_ARGS)
   deconstruct_array(stats, elemTypeId, elemTypeWidth, elemTypeByValue, elemTypeAlignmentCode,
       &statsContent, &statsNulls, &statsLength);
 
-  result_build = initArrayResultWithNulls(elemTypeId, CurrentMemoryContext, statsLength);
+  result_build = initArrayResultWithNulls(INT8OID, CurrentMemoryContext, statsLength);
 
   for (i = 0; i < statsLength; i++) {
-    VecAggElementStatsType *stats = NULL; // FIXME get from stats[i]
-    result_build->dvalues[i] = Int64GetDatum(stats->count);
+    if (statsNulls[i]) continue;
+    elemStats = DatumGetVecAggElementStatsTypeP(statsContent[i]);
+    result_build->dvalues[i] = Int64GetDatum(elemStats->count);
+    result_build->dnulls = false;
   }
 
   dims[0] = result_build->nelems;

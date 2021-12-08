@@ -1339,6 +1339,6 @@ CREATE AGGREGATE vec_stat_agg(numeric[]) (
 
 CREATE OR REPLACE FUNCTION
 vec_agg_count(vecaggstats[])
-RETURNS numeric[]
+RETURNS bigint[]
 AS 'aggs_for_vecs', 'vec_agg_count'
 LANGUAGE c STRICT;
