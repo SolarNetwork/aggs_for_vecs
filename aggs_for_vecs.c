@@ -35,6 +35,7 @@ static Datum NUMERIC_ONE;
 static FmgrInfo numeric_avg_accum_fmgrinfo;
 static FmgrInfo numeric_avg_fmgrinfo;
 static FmgrInfo numeric_cmp_fmgrinfo;
+static FmgrInfo numeric_sum_fmgrinfo;
 
 void
 _PG_init(void)
@@ -48,6 +49,7 @@ _PG_init(void)
   fmgr_info(fmgr_internal_function("numeric_avg_accum"), &numeric_avg_accum_fmgrinfo);
   fmgr_info(fmgr_internal_function("numeric_avg"), &numeric_avg_fmgrinfo);
   fmgr_info(fmgr_internal_function("numeric_cmp"), &numeric_cmp_fmgrinfo);
+  fmgr_info(fmgr_internal_function("numeric_sum"), &numeric_sum_fmgrinfo);
   // TODO: numeric_accum for *_samp style aggregates
 
   MemoryContextSwitchTo(old);

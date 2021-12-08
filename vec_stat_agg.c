@@ -49,7 +49,7 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
     switch(elemTypeId) {
       // TODO: support other number types
       case NUMERICOID:
-        // TODO: the numeric_avg_accum supports numeric_avg and numeric_sum final functions
+        // the numeric_avg_accum supports numeric_avg and numeric_sum final functions
         InitFunctionCallInfoData(*state->transfn_fcinfo, &numeric_avg_accum_fmgrinfo, 2, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
         InitFunctionCallInfoData(*state->cmp_fcinfo, &numeric_cmp_fmgrinfo, 2, InvalidOid, NULL, NULL);
         break;
@@ -140,13 +140,15 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
   ArrayBuildState *result_build;
   Oid statsOid;
   VecAggElementStatsType *stats;
+  Size statsSize;
   int dims[1];
   int lbs[1];
   int i;
   int16 elementTypeLen;
   bool elementTypeByVal;
   char elementTypeAlign;
-
+  FunctionCallInfo sum_fcinfo;
+  Datum sumResult;
 
   Assert(AggCheckCallContext(fcinfo, NULL));
 
@@ -160,14 +162,39 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
 
   get_typlenbyvalalign(state->elementType, &elementTypeLen, &elementTypeByVal, &elementTypeAlign);
 
+  // look up our sum function to extract sum from each element's state
+  sum_fcinfo = palloc0(SizeForFunctionCallInfo(1));
+  switch(state->elementType) {
+      // TODO: support other number types
+      case NUMERICOID:
+        InitFunctionCallInfoData(*sum_fcinfo, &numeric_sum_fmgrinfo, 1, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
+        break;
+      default:
+        elog(ERROR, "Unknown array element type");
+    }
+
   for (i = 0; i < state->nelems; i++) {
     if (state->nelems < 1) continue;
-    stats = palloc(sizeof(VecAggElementStatsType));
+    
+    stats = palloc0(sizeof(VecAggElementStatsType));
     stats->elemTypeId = state->elementType;
     stats->count = state->vec_counts[i];
     stats->min = datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen);
     stats->max = datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen);
-    stats->sum = 0; // TODO: extract sum out of stats->vec_states[i], i.e. call numeric_sum
+
+    sum_fcinfo->args[0].value = state->vec_states[i];
+    sum_fcinfo->isnull = false;
+    sumResult = FunctionCallInvoke(sum_fcinfo);
+    if (sum_fcinfo->isnull) {
+      stats->sum = 0; // is this an error condition?
+    } else {
+      stats->sum = datumCopy(sumResult, elementTypeByVal, elementTypeLen);
+    }
+
+    statsSize = sizeof(VecAggElementStatsType);
+    // FIXME: how calculate actual size? do we?
+    SET_VARSIZE(stats, statsSize);
+
     result_build->dvalues[i] = VecAggElementStatsTypePGetDatum(stats);
     result_build->dnulls[i] = false;
   }
