@@ -155,7 +155,7 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
   if (state == NULL)
     PG_RETURN_NULL();
 
-  statsOid = typenameTypeId(NULL, typeStringToTypeName("vecaggstats")); // TODO: CACHE in _PG_init how lookup OID of VecAggElementStats type?
+  statsOid = typenameTypeId(NULL, typeStringToTypeName("vecaggstats"));
   result_build = initArrayResultWithNulls(statsOid, CurrentMemoryContext, state->nelems);
 
   get_typlenbyvalalign(state->elementType, &elementTypeLen, &elementTypeByVal, &elementTypeAlign);
