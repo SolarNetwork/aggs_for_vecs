@@ -76,8 +76,8 @@ vecaggstats_out(PG_FUNCTION_ARGS)
 	char	             *result;
 
 	// TODO: format to actual string
-  result = palloc(6);
-  strcpy(result, "hello");
+  result = palloc(5);
+  strcpy(result, "TODO");
 
 	PG_RETURN_CSTRING(result);
 }
