@@ -36,9 +36,6 @@ static FmgrInfo numeric_avg_accum_fmgrinfo;
 static FmgrInfo numeric_avg_fmgrinfo;
 static FmgrInfo numeric_cmp_fmgrinfo;
 
-// cache our custom VecAggElementStats type Oid
-static Oid VecAggElementStatsTypeOid;
-
 void
 _PG_init(void)
 {
@@ -53,9 +50,6 @@ _PG_init(void)
   fmgr_info(fmgr_internal_function("numeric_cmp"), &numeric_cmp_fmgrinfo);
   // TODO: numeric_accum for *_samp style aggregates
 
-  // FIXME: this returns error "Unknown type: vecaggstats"... how do this?
-  //VecAggElementStatsTypeOid = typenameTypeId(NULL, typeStringToTypeName("vecaggstats"));
-  
   MemoryContextSwitchTo(old);
 }
 
