@@ -1342,3 +1342,23 @@ vec_agg_count(vecaggstats)
 RETURNS bigint[]
 AS 'aggs_for_vecs', 'vec_agg_count'
 LANGUAGE c STRICT;
+
+
+
+-- vec_agg_mean
+
+CREATE OR REPLACE FUNCTION
+vec_agg_mean(vecaggstats) -- TODO: take finalfunc_extra like arg to RETURNS ANYARRAY?
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_mean'
+LANGUAGE c STRICT;
+
+
+
+-- vec_agg_sum
+
+CREATE OR REPLACE FUNCTION
+vec_agg_sum(vecaggstats) -- TODO: take finalfunc_extra like arg to RETURNS ANYARRAY?
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_sum'
+LANGUAGE c STRICT;

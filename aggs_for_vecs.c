@@ -78,6 +78,8 @@ _PG_fini(void)
 #include "vec_without_outliers.c"
 #include "vec_stat_agg.c"
 #include "vec_agg_count.c"
+#include "vec_agg_mean.c"
+#include "vec_agg_sum.c"
 #include "vec_to_count.c"
 #include "vec_to_sum.c"
 #include "vec_to_mean.c"
