@@ -1322,7 +1322,7 @@ LANGUAGE c;
 
 CREATE OR REPLACE FUNCTION
 vec_stat_agg_finalfn(internal, numeric[])
-RETURNS vecaggstats[]
+RETURNS vecaggstats
 AS 'aggs_for_vecs', 'vec_stat_agg_finalfn'
 LANGUAGE c;
 
@@ -1338,7 +1338,7 @@ CREATE AGGREGATE vec_stat_agg(numeric[]) (
 -- vec_agg_count
 
 CREATE OR REPLACE FUNCTION
-vec_agg_count(vecaggstats[])
+vec_agg_count(vecaggstats)
 RETURNS bigint[]
 AS 'aggs_for_vecs', 'vec_agg_count'
 LANGUAGE c STRICT;

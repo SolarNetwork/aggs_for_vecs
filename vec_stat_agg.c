@@ -131,18 +131,12 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
 Datum vec_stat_agg_finalfn(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(vec_stat_agg_finalfn);
 
-// Return array of VecAggElementStats elements
+// Return VecAggStatsType
 Datum
 vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
 {
   VecAggAccumState *state;
-  Datum result;
-  ArrayBuildState *result_build;
-  Oid statsOid;
-  VecAggElementStatsType *stats;
-  Size statsSize;
-  int dims[1];
-  int lbs[1];
+  VecAggStatsType *stats;
   int i;
   int16 elementTypeLen;
   bool elementTypeByVal;
@@ -154,11 +148,9 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
 
   state = PG_ARGISNULL(0) ? NULL : (VecAggAccumState *)PG_GETARG_POINTER(0);
 
-  if (state == NULL)
+  if (state == NULL) {
     PG_RETURN_NULL();
-
-  statsOid = typenameTypeId(NULL, typeStringToTypeName("vecaggstats"));
-  result_build = initArrayResultWithNulls(statsOid, CurrentMemoryContext, state->nelems);
+  }
 
   get_typlenbyvalalign(state->elementType, &elementTypeLen, &elementTypeByVal, &elementTypeAlign);
 
@@ -171,36 +163,27 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
         break;
       default:
         elog(ERROR, "Unknown array element type");
-    }
+  }
+
+  stats = initVecAggStatsType(state->elementType, CurrentMemoryContext, state->nelems);
 
   for (i = 0; i < state->nelems; i++) {
-    if (state->nelems < 1) continue;
-    
-    stats = palloc0(sizeof(VecAggElementStatsType));
-    stats->elemTypeId = state->elementType;
-    stats->count = state->vec_counts[i];
-    stats->min = datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen);
-    stats->max = datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen);
+    stats->counts[i] = state->vec_counts[i];
+    stats->mins[i] = datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen);
+    stats->maxes[i] = datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen);
 
     sum_fcinfo->args[0].value = state->vec_states[i];
     sum_fcinfo->isnull = false;
     sumResult = FunctionCallInvoke(sum_fcinfo);
     if (sum_fcinfo->isnull) {
-      stats->sum = 0; // is this an error condition?
+      stats->sums[i] = 0; // is this an error condition?
     } else {
-      stats->sum = datumCopy(sumResult, elementTypeByVal, elementTypeLen);
+      stats->sums[i] = datumCopy(sumResult, elementTypeByVal, elementTypeLen);
     }
-
-    statsSize = sizeof(VecAggElementStatsType);
-    // FIXME: how calculate actual size? do we?
-    SET_VARSIZE(stats, statsSize);
-
-    result_build->dvalues[i] = VecAggElementStatsTypePGetDatum(stats);
-    result_build->dnulls[i] = false;
   }
 
-  dims[0] = state->nelems;
-  lbs[0] = 1;
-  result = makeMdArrayResult(result_build, 1, dims, lbs, CurrentMemoryContext, false);
-  PG_RETURN_DATUM(result);
+    // FIXME: now that we've populated Datum elements, how do we adjust the stats varlena?
+    //SET_VARSIZE(stats, newStatsSize);
+
+  PG_RETURN_DATUM(VecAggStatsTypePGetDatum(stats));
 }

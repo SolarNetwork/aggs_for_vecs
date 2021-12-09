@@ -3,44 +3,27 @@ Datum vec_agg_count(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(vec_agg_count);
 
 /**
- * Extract an array of counts from a VecAggAccumState.
+ * Extract an array of counts from a VecAggStatsType.
  */
 Datum
 vec_agg_count(PG_FUNCTION_ARGS)
 {
   Datum result;
-  ArrayType *stats; // an array of VecAggElementStats elements
   ArrayBuildState *result_build;
-  Datum *statsContent;
-  bool *statsNulls;
-  int statsLength;
-  Oid elemTypeId;
-  int16 elemTypeWidth;
-  bool elemTypeByValue;
-  char elemTypeAlignmentCode;
-  VecAggElementStatsType *elemStats;
+  VecAggStatsType *stats;
   int dims[1];
   int lbs[1];
   int i;
 
-  stats = PG_ARGISNULL(0) ? NULL : PG_GETARG_ARRAYTYPE_P(0);
-  if (stats == NULL || ARR_NDIM(stats) == 0) {
+  stats = PG_ARGISNULL(0) ? NULL : PG_GETARG_VECAGGSTATS_P(0);
+  if (stats == NULL || stats->nelems < 1) {
     PG_RETURN_NULL();
   }
 
-  elemTypeId = ARR_ELEMTYPE(stats);
+  result_build = initArrayResultWithNulls(INT8OID, CurrentMemoryContext, stats->nelems);
 
-  get_typlenbyvalalign(elemTypeId, &elemTypeWidth, &elemTypeByValue, &elemTypeAlignmentCode);
-
-  deconstruct_array(stats, elemTypeId, elemTypeWidth, elemTypeByValue, elemTypeAlignmentCode,
-      &statsContent, &statsNulls, &statsLength);
-
-  result_build = initArrayResultWithNulls(INT8OID, CurrentMemoryContext, statsLength);
-
-  for (i = 0; i < statsLength; i++) {
-    if (statsNulls[i]) continue;
-    elemStats = DatumGetVecAggElementStatsTypeP(statsContent[i]);
-    result_build->dvalues[i] = Int64GetDatum(elemStats->count);
+  for (i = 0; i < stats->nelems; i++) {
+    result_build->dvalues[i] = Int64GetDatum(stats->counts[i]);
     result_build->dnulls = false;
   }
 

@@ -32,16 +32,6 @@ typedef struct VecArrayBuildState {
   pgnum *vectmpvalues;  // Intermediate results if we need them.
 } VecArrayBuildState;
 
-typedef struct VecAggAccumState {
-  Oid elementType;
-  int nelems;                      // number of elements
-  Datum *vec_states;               // Element aggregate state.
-  Datum *vec_mins;                 // Element min value seen.
-  Datum *vec_maxes;                // Element max value seen.
-  uint32 *vec_counts;              // Element non-null count.
-  FunctionCallInfo transfn_fcinfo; // Cached function call for invoking aggregate function.
-  FunctionCallInfo cmp_fcinfo;     // Cached function call for invoking comparison function.
-} VecAggAccumState;
 
 VecArrayBuildState *
 initVecArrayResultWithNulls(Oid input_element_type, Oid state_element_type, MemoryContext rcontext, int arLen);
@@ -83,24 +73,6 @@ initVecArrayResultWithNulls(Oid input_element_type, Oid state_element_type, Memo
   return astate;
 }
 
-VecAggAccumState *
-initVecAggAccumStateWithNulls(Oid element_type, MemoryContext rcontext, int arLen);
-
-VecAggAccumState *
-initVecAggAccumStateWithNulls(Oid element_type, MemoryContext rcontext, int arLen) {
-  VecAggAccumState *astate;
-
-  astate = (VecAggAccumState *)MemoryContextAlloc(rcontext, sizeof(VecAggAccumState));
-  astate->nelems = arLen;
-  astate->elementType = element_type;
-  astate->vec_states = (Datum *)MemoryContextAllocZero(rcontext, arLen * sizeof(Datum));
-  astate->vec_mins = (Datum *)MemoryContextAllocZero(rcontext, arLen * sizeof(Datum));
-  astate->vec_maxes = (Datum *)MemoryContextAllocZero(rcontext, arLen * sizeof(Datum));
-  astate->vec_counts = (uint32 *)MemoryContextAllocZero(rcontext, arLen * sizeof(uint32));
-  
-  return astate;
-}
-
 ArrayBuildState *
 initArrayResultWithNulls(Oid element_type, MemoryContext rcontext, int arLen);
 
@@ -132,4 +104,3 @@ initArrayResultWithNulls(Oid element_type, MemoryContext rcontext, int arLen) {
 
   return astate;
 }
-
