@@ -22,6 +22,7 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
   bool *currentNulls;
   int i;
   Datum compareResult;
+  MemoryContext oldContext;
 
   if (!AggCheckCallContext(fcinfo, &aggContext)) {
     elog(ERROR, "vec_stat_agg called in non-aggregate context");
@@ -80,8 +81,10 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
     } else {
       if (state->vec_counts[i] < 1) {
         // first non-null element; we can use this as initial min/max values
-        state->vec_mins[i] = currentVals[i];
-        state->vec_maxes[i] = currentVals[i];
+        oldContext = MemoryContextSwitchTo(aggContext); {
+          state->vec_mins[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
+          state->vec_maxes[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
+        } MemoryContextSwitchTo(oldContext);
         state->transfn_fcinfo->args[0].isnull = true;
       } else {
         state->transfn_fcinfo->args[0].isnull = false;
@@ -95,7 +98,9 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
           // delegate function returned no result
           ereport(ERROR, (errmsg("The delegate comparison function returned a NULL result on element %d", i)));
         } else if (DatumGetInt32(compareResult) > 0) {
-          state->vec_mins[i] = currentVals[i];
+          oldContext = MemoryContextSwitchTo(aggContext); {
+            state->vec_mins[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
+          } MemoryContextSwitchTo(oldContext);
         }
 
         // execute delegate comparison function for max
@@ -107,7 +112,9 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
           // delegate function returned no result
           ereport(ERROR, (errmsg("The delegate comparison function returned a NULL result on element %d", i)));
         } else if (DatumGetInt32(compareResult) < 0) {
-          state->vec_maxes[i] = currentVals[i];
+          oldContext = MemoryContextSwitchTo(aggContext); {
+            state->vec_maxes[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
+          } MemoryContextSwitchTo(oldContext);
         }
       }
       
@@ -141,6 +148,19 @@ Datum executeAndCopy1(FunctionCallInfo fcinfo, bool elementTypeByVal, int16 elem
     return datumCopy(tmpResult, elementTypeByVal, elementTypeLen);
 }
 
+static
+Datum execute1(FunctionCallInfo fcinfo, Datum arg1)
+{
+    Datum result;
+    fcinfo->args[0].value = arg1;
+    fcinfo->isnull = false;
+    result = FunctionCallInvoke(fcinfo);
+    if (fcinfo->isnull) {
+      return 0; // is this an error condition?
+    }
+    return result;
+}
+
 Datum vec_stat_agg_finalfn(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(vec_stat_agg_finalfn);
 
@@ -156,7 +176,6 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
   char elementTypeAlign;
   FunctionCallInfo sum_fcinfo;
   FunctionCallInfo mean_fcinfo;
-  Datum tmpResult;
 
   Assert(AggCheckCallContext(fcinfo, NULL));
 
@@ -185,10 +204,10 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
 
   for (i = 0; i < state->nelems; i++) {
     stats->counts[i] = state->vec_counts[i];
-    stats->mins[i] = datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen);
-    stats->maxes[i] = datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen);
-    stats->sums[i] = executeAndCopy1(sum_fcinfo, elementTypeByVal, elementTypeLen, state->vec_states[i]);
-    stats->means[i] = executeAndCopy1(mean_fcinfo, elementTypeByVal, elementTypeLen, state->vec_states[i]);
+    stats->mins[i] = (state->vec_mins[i] ? datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen) : 0);
+    stats->maxes[i] = (state->vec_maxes[i] ? datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen) : 0);
+    stats->sums[i] = (state->vec_states[i] ? execute1(sum_fcinfo, state->vec_states[i]) : 0);
+    stats->means[i] = (state->vec_states[i] ? execute1(mean_fcinfo, state->vec_states[i]) : 0);
   }
 
   // FIXME: now that we've populated Datum elements, how do we adjust the stats varlena?
