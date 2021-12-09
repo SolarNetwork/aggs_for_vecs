@@ -128,6 +128,19 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
   PG_RETURN_POINTER(state);
 }
 
+static
+Datum executeAndCopy1(FunctionCallInfo fcinfo, bool elementTypeByVal, int16 elementTypeLen, Datum arg1)
+{
+    Datum tmpResult;
+    fcinfo->args[0].value = arg1;
+    fcinfo->isnull = false;
+    tmpResult = FunctionCallInvoke(fcinfo);
+    if (fcinfo->isnull) {
+      return 0; // is this an error condition?
+    }
+    return datumCopy(tmpResult, elementTypeByVal, elementTypeLen);
+}
+
 Datum vec_stat_agg_finalfn(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(vec_stat_agg_finalfn);
 
@@ -142,7 +155,8 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
   bool elementTypeByVal;
   char elementTypeAlign;
   FunctionCallInfo sum_fcinfo;
-  Datum sumResult;
+  FunctionCallInfo mean_fcinfo;
+  Datum tmpResult;
 
   Assert(AggCheckCallContext(fcinfo, NULL));
 
@@ -154,12 +168,14 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
 
   get_typlenbyvalalign(state->elementType, &elementTypeLen, &elementTypeByVal, &elementTypeAlign);
 
-  // look up our sum function to extract sum from each element's state
+  // look up our delegate functions to extract values from each element's state
   sum_fcinfo = palloc0(SizeForFunctionCallInfo(1));
+  mean_fcinfo = palloc0(SizeForFunctionCallInfo(1));
   switch(state->elementType) {
       // TODO: support other number types
       case NUMERICOID:
         InitFunctionCallInfoData(*sum_fcinfo, &numeric_sum_fmgrinfo, 1, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
+        InitFunctionCallInfoData(*mean_fcinfo, &numeric_avg_fmgrinfo, 1, fcinfo->fncollation, fcinfo->context, fcinfo->resultinfo);
         break;
       default:
         elog(ERROR, "Unknown array element type");
@@ -171,19 +187,12 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
     stats->counts[i] = state->vec_counts[i];
     stats->mins[i] = datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen);
     stats->maxes[i] = datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen);
-
-    sum_fcinfo->args[0].value = state->vec_states[i];
-    sum_fcinfo->isnull = false;
-    sumResult = FunctionCallInvoke(sum_fcinfo);
-    if (sum_fcinfo->isnull) {
-      stats->sums[i] = 0; // is this an error condition?
-    } else {
-      stats->sums[i] = datumCopy(sumResult, elementTypeByVal, elementTypeLen);
-    }
+    stats->sums[i] = executeAndCopy1(sum_fcinfo, elementTypeByVal, elementTypeLen, state->vec_states[i]);
+    stats->means[i] = executeAndCopy1(mean_fcinfo, elementTypeByVal, elementTypeLen, state->vec_states[i]);
   }
 
-    // FIXME: now that we've populated Datum elements, how do we adjust the stats varlena?
-    //SET_VARSIZE(stats, newStatsSize);
+  // FIXME: now that we've populated Datum elements, how do we adjust the stats varlena?
+  //SET_VARSIZE(stats, newStatsSize);
 
   PG_RETURN_DATUM(VecAggStatsTypePGetDatum(stats));
 }
