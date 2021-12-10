@@ -42,10 +42,10 @@ initVecAggAccumStateWithNulls(Oid element_type, MemoryContext rcontext, int arLe
   astate = (VecAggAccumState *)MemoryContextAlloc(rcontext, sizeof(VecAggAccumState));
   astate->nelems = arLen;
   astate->elementType = element_type;
-  astate->vec_states = (Datum *)MemoryContextAllocZero(rcontext, arLen * sizeof(Datum));
-  astate->vec_mins = (Datum *)MemoryContextAllocZero(rcontext, arLen * sizeof(Datum));
-  astate->vec_maxes = (Datum *)MemoryContextAllocZero(rcontext, arLen * sizeof(Datum));
-  astate->vec_counts = (uint32 *)MemoryContextAllocZero(rcontext, arLen * sizeof(uint32));
+  astate->vec_states = (Datum *)MemoryContextAlloc(rcontext, arLen * sizeof(Datum));
+  astate->vec_mins = (Datum *)MemoryContextAlloc(rcontext, arLen * sizeof(Datum));
+  astate->vec_maxes = (Datum *)MemoryContextAlloc(rcontext, arLen * sizeof(Datum));
+  astate->vec_counts = (uint32 *)MemoryContextAllocZero(rcontext, arLen * sizeof(uint32)); // set counts to 0
   
   return astate;
 }
@@ -61,11 +61,11 @@ initVecAggStatsType(Oid element_type, MemoryContext rcontext, int nelems) {
 
   stats->elemTypeId = element_type;
   stats->nelems = nelems;
-  stats->counts = (nelems < 1 ? 0 : MemoryContextAllocZero(rcontext, nelems * sizeof(int64)));
-  stats->sums = (nelems < 1 ? 0 : MemoryContextAllocZero(rcontext, nelems * sizeof(Datum)));
-  stats->mins = (nelems < 1 ? 0 : MemoryContextAllocZero(rcontext, nelems * sizeof(Datum)));
-  stats->maxes = (nelems < 1 ? 0 : MemoryContextAllocZero(rcontext, nelems * sizeof(Datum)));
-  stats->means = (nelems < 1 ? 0 : MemoryContextAllocZero(rcontext, nelems * sizeof(Datum)));
+  stats->counts = (nelems < 1 ? 0 : MemoryContextAllocZero(rcontext, nelems * sizeof(int64))); // set counts to 0
+  stats->sums = (nelems < 1 ? 0 : MemoryContextAlloc(rcontext, nelems * sizeof(Datum)));
+  stats->mins = (nelems < 1 ? 0 : MemoryContextAlloc(rcontext, nelems * sizeof(Datum)));
+  stats->maxes = (nelems < 1 ? 0 : MemoryContextAlloc(rcontext, nelems * sizeof(Datum)));
+  stats->means = (nelems < 1 ? 0 : MemoryContextAlloc(rcontext, nelems * sizeof(Datum)));
 
   SET_VARSIZE(stats, sizeof(VecAggStatsType) 
                   + (nelems * sizeof(int64)) 

@@ -45,8 +45,8 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
     state = initVecAggAccumStateWithNulls(elemTypeId, aggContext, arrayLength);
 
     // Set up the delegate aggregate transition/compare function calls
-    state->transfn_fcinfo = MemoryContextAllocZero(aggContext,  SizeForFunctionCallInfo(2));
-    state->cmp_fcinfo = MemoryContextAllocZero(aggContext,  SizeForFunctionCallInfo(2));
+    state->transfn_fcinfo = MemoryContextAlloc(aggContext,  SizeForFunctionCallInfo(2));
+    state->cmp_fcinfo = MemoryContextAlloc(aggContext,  SizeForFunctionCallInfo(2));
     switch(elemTypeId) {
       // TODO: support other number types
       case NUMERICOID:
@@ -191,10 +191,10 @@ vec_stat_agg_finalfn(PG_FUNCTION_ARGS)
 
   for (i = 0; i < state->nelems; i++) {
     stats->counts[i] = state->vec_counts[i];
-    stats->mins[i] = (state->vec_mins[i] ? datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen) : 0);
-    stats->maxes[i] = (state->vec_maxes[i] ? datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen) : 0);
-    stats->sums[i] = (state->vec_states[i] ? execute1(sum_fcinfo, state->vec_states[i]) : 0);
-    stats->means[i] = (state->vec_states[i] ? execute1(mean_fcinfo, state->vec_states[i]) : 0);
+    stats->mins[i] = (state->vec_counts[i] ? datumCopy(state->vec_mins[i], elementTypeByVal, elementTypeLen) : 0);
+    stats->maxes[i] = (state->vec_counts[i] ? datumCopy(state->vec_maxes[i], elementTypeByVal, elementTypeLen) : 0);
+    stats->sums[i] = (state->vec_counts[i] ? execute1(sum_fcinfo, state->vec_states[i]) : 0);
+    stats->means[i] = (state->vec_counts[i] ? execute1(mean_fcinfo, state->vec_states[i]) : 0);
   }
 
   // FIXME: now that we've populated Datum elements, how do we adjust the stats varlena?
