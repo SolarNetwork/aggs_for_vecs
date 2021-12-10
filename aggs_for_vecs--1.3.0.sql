@@ -1289,3 +1289,96 @@ vec_pow(anyelement, anyarray)
 RETURNS anyarray
 AS 'aggs_for_vecs', 'vec_pow_with_scalar'
 LANGUAGE c;
+
+
+
+-- vecaggstats type
+
+CREATE TYPE vecaggstats;
+
+CREATE FUNCTION vecaggstats_in(cstring)
+    RETURNS vecaggstats
+    AS 'aggs_for_vecs'
+    LANGUAGE C IMMUTABLE STRICT;
+
+CREATE FUNCTION vecaggstats_out(vecaggstats)
+    RETURNS cstring
+    AS 'aggs_for_vecs'
+    LANGUAGE C IMMUTABLE STRICT;
+
+CREATE TYPE vecaggstats (
+    internallength = variable,
+    input = vecaggstats_in,
+    output = vecaggstats_out
+);
+
+-- vec_stat_agg
+
+CREATE OR REPLACE FUNCTION
+vec_stat_agg_transfn(internal, numeric[])
+RETURNS internal
+AS 'aggs_for_vecs', 'vec_stat_agg_transfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_stat_agg_finalfn(internal, numeric[])
+RETURNS vecaggstats
+AS 'aggs_for_vecs', 'vec_stat_agg_finalfn'
+LANGUAGE c;
+
+CREATE AGGREGATE vec_stat_agg(numeric[]) (
+  sfunc = vec_stat_agg_transfn,
+  stype = internal,
+  finalfunc = vec_stat_agg_finalfn,
+  finalfunc_extra
+);
+
+
+
+-- vec_agg_count
+
+CREATE OR REPLACE FUNCTION
+vec_agg_count(vecaggstats)
+RETURNS bigint[]
+AS 'aggs_for_vecs', 'vec_agg_count'
+LANGUAGE c STRICT;
+
+
+
+-- vec_agg_max
+
+CREATE OR REPLACE FUNCTION
+vec_agg_max(vecaggstats) -- TODO: take finalfunc_extra like arg to RETURNS ANYARRAY?
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_max'
+LANGUAGE c STRICT;
+
+
+
+-- vec_agg_mean
+
+CREATE OR REPLACE FUNCTION
+vec_agg_mean(vecaggstats) -- TODO: take finalfunc_extra like arg to RETURNS ANYARRAY?
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_mean'
+LANGUAGE c STRICT;
+
+
+
+-- vec_agg_mean
+
+CREATE OR REPLACE FUNCTION
+vec_agg_min(vecaggstats) -- TODO: take finalfunc_extra like arg to RETURNS ANYARRAY?
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_min'
+LANGUAGE c STRICT;
+
+
+
+-- vec_agg_sum
+
+CREATE OR REPLACE FUNCTION
+vec_agg_sum(vecaggstats) -- TODO: take finalfunc_extra like arg to RETURNS ANYARRAY?
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_sum'
+LANGUAGE c STRICT;

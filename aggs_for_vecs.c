@@ -1,6 +1,8 @@
 #include <postgres.h>
 #include <fmgr.h>
+#include <libpq/pqformat.h>
 #include <catalog/pg_type.h>
+#include <parser/parse_type.h>
 #include <utils/datum.h>
 #include <utils/array.h>
 #include <utils/builtins.h>
@@ -29,6 +31,12 @@ _PG_fini(void);
 static Datum NUMERIC_ZERO;
 static Datum NUMERIC_ONE;
 
+// some cached function infos to speed up numeric operations
+static FmgrInfo numeric_avg_accum_fmgrinfo;
+static FmgrInfo numeric_avg_fmgrinfo;
+static FmgrInfo numeric_cmp_fmgrinfo;
+static FmgrInfo numeric_sum_fmgrinfo;
+
 void
 _PG_init(void)
 {
@@ -36,6 +44,14 @@ _PG_init(void)
   old = MemoryContextSwitchTo(TopMemoryContext);
   NUMERIC_ZERO = DirectFunctionCall1(int4_numeric, Int32GetDatum(0));
   NUMERIC_ONE = DirectFunctionCall1(int4_numeric, Int32GetDatum(1));
+ 
+  // cache function lookups for faster use later
+  fmgr_info(fmgr_internal_function("numeric_avg_accum"), &numeric_avg_accum_fmgrinfo);
+  fmgr_info(fmgr_internal_function("numeric_avg"), &numeric_avg_fmgrinfo);
+  fmgr_info(fmgr_internal_function("numeric_cmp"), &numeric_cmp_fmgrinfo);
+  fmgr_info(fmgr_internal_function("numeric_sum"), &numeric_sum_fmgrinfo);
+  // TODO: numeric_accum for *_samp style aggregates
+
   MemoryContextSwitchTo(old);
 }
 
@@ -50,6 +66,7 @@ _PG_fini(void)
 }
 
 #include "util.c"
+#include "stats.c"
 #include "pad_vec.c"
 #include "vec_add.c"
 #include "vec_sub.c"
@@ -59,6 +76,12 @@ _PG_fini(void)
 #include "vec_coalesce.c"
 #include "vec_trim_scale.c"
 #include "vec_without_outliers.c"
+#include "vec_stat_agg.c"
+#include "vec_agg_count.c"
+#include "vec_agg_max.c"
+#include "vec_agg_mean.c"
+#include "vec_agg_min.c"
+#include "vec_agg_sum.c"
 #include "vec_to_count.c"
 #include "vec_to_sum.c"
 #include "vec_to_mean.c"
