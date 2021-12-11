@@ -63,7 +63,7 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
     if (currentNulls[i]) {
       // do nothing: nulls can't change the result.
     } else {
-      if (state->vec_counts[i] < 1) {
+      if (!state->vec_counts[i]) {
         // first call to delegate aggregate transition, so must init transfn_fcinfo if not already
         if (!transfn_fcinfo) {
           transfn_fcinfo = MemoryContextAlloc(aggContext,  SizeForFunctionCallInfo(2));
@@ -109,11 +109,8 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
         }
       }
       
-      // increment non-null count
-      state->vec_counts[i]++;
-
       // execute delegate transition function
-      if (transfn_fcinfo) {
+      if (!state->vec_counts[i]) {
         // first argument passed is null, so can't use DirectFunctionCall2 here
         transfn_fcinfo->args[1].value = currentVals[i];
         transfn_fcinfo->isnull = false;
@@ -132,6 +129,9 @@ vec_stat_agg_transfn(PG_FUNCTION_ARGS)
             elog(ERROR, "Unknown array element type");
         }
       }
+
+      // increment non-null count
+      state->vec_counts[i]++;
     }
   }
   PG_RETURN_POINTER(state);
