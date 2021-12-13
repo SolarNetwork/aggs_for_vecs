@@ -113,7 +113,7 @@ vec_stat_accum(PG_FUNCTION_ARGS)
         switch(state->astate->element_type) {
           // TODO: support other number types
           case NUMERICOID:
-            state->vec_states[i] = DirectFunctionCall2(numeric_avg_accum, state->vec_states[i], currentVals[i]);
+            DirectFunctionCall2(numeric_avg_accum, state->vec_states[i], currentVals[i]);
             break;
           default:
             elog(ERROR, "Unknown array element type");
