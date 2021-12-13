@@ -1,4 +1,3 @@
-
 Datum vec_agg_count_finalfn(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(vec_agg_count_finalfn);
 
@@ -9,29 +8,36 @@ Datum
 vec_agg_count_finalfn(PG_FUNCTION_ARGS)
 {
   Datum result;
-  ArrayBuildState *result_build;
+  MemoryContext aggContext;
   VecAggAccumState *state;
+  ArrayBuildState *astate;
   int dims[1];
   int lbs[1];
   int i;
 
-  Assert(AggCheckCallContext(fcinfo, NULL));
+  if (!AggCheckCallContext(fcinfo, &aggContext)) {
+    elog(ERROR, "Function called in non-aggregate context");
+  }
 
   state = PG_ARGISNULL(0) ? NULL : (VecAggAccumState *)PG_GETARG_POINTER(0);
-  if (state == NULL || state->nelems < 1) {
+  if (state == NULL || state->astate->alen < 1) {
     PG_RETURN_NULL();
   }
 
-  result_build = initArrayResultWithNulls(INT8OID, CurrentMemoryContext, state->nelems);
-
-  for (i = 0; i < state->nelems; i++) {
-    result_build->dvalues[i] = Int64GetDatum(state->vec_counts[i]);
-    result_build->dnulls[i] = false;
+  if (state->astate->element_type == INT8OID) {
+    astate = state->astate;
+  } else {
+    astate = initArrayResultWithNulls(INT8OID, aggContext, state->astate->alen);
   }
 
-  dims[0] = result_build->nelems;
+  for (i = 0; i < astate->alen; i++) {
+    astate->dvalues[i] = Int64GetDatum((int64)state->vec_counts[i]);
+    astate->dnulls[i] = false;
+  }
+
+  dims[0] = astate->alen;
   lbs[0] = 1;
 
-  result = makeMdArrayResult(result_build, 1, dims, lbs, CurrentMemoryContext, false);
+  result = makeMdArrayResult(astate, 1, dims, lbs, CurrentMemoryContext, false);
   PG_RETURN_DATUM(result);
 }

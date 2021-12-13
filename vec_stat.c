@@ -1,26 +1,24 @@
 typedef struct VecAggAccumState {
-  Oid              elementType;    // input element type
-  int              nelems;         // number of elements
+  ArrayBuildState *astate;
   uint32          *vec_counts;     // Element non-null count.
   Datum           *vec_states;     // Element aggregate state.
-  Datum           *vec_mins;       // Element min value seen.
-  Datum           *vec_maxes;      // Element max value seen.
+  pgnum           *vec_mins;       // Element min value seen.
+  pgnum           *vec_maxes;      // Element max value seen.
 } VecAggAccumState;
 
 VecAggAccumState *
-initVecAggAccumState(Oid element_type, MemoryContext rcontext, int nelems);
+initVecAggAccumStateWithNulls(Oid element_type, MemoryContext rcontext, int alen);
 
 VecAggAccumState *
-initVecAggAccumState(Oid element_type, MemoryContext rcontext, int nelems) {
-  VecAggAccumState *astate;
+initVecAggAccumStateWithNulls(Oid element_type, MemoryContext rcontext, int alen) {
+  VecAggAccumState *state;
 
-  astate = (VecAggAccumState *)MemoryContextAlloc(rcontext, sizeof(VecAggAccumState));
-  astate->nelems = nelems;
-  astate->elementType = element_type;
-  astate->vec_counts = (uint32 *)MemoryContextAllocZero(rcontext, nelems * sizeof(uint32)); // set counts to 0 with AllocZero
-  astate->vec_states = (Datum *)MemoryContextAlloc(rcontext, nelems * sizeof(Datum));
-  astate->vec_mins = (Datum *)MemoryContextAlloc(rcontext, nelems * sizeof(Datum));
-  astate->vec_maxes = (Datum *)MemoryContextAlloc(rcontext, nelems * sizeof(Datum));
+  state = (VecAggAccumState *)MemoryContextAlloc(rcontext, sizeof(VecAggAccumState));
+  state->astate = initArrayResultWithNulls(element_type, rcontext, alen);
+  state->vec_counts = (uint32 *)MemoryContextAllocZero(rcontext, alen * sizeof(uint32)); // set counts to 0 with AllocZero
+  state->vec_states = (Datum *)MemoryContextAlloc(rcontext, alen * sizeof(Datum));
+  state->vec_mins = (pgnum *)MemoryContextAlloc(rcontext, alen * sizeof(pgnum));
+  state->vec_maxes = (pgnum *)MemoryContextAlloc(rcontext, alen * sizeof(pgnum));
   
-  return astate;
+  return state;
 }

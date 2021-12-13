@@ -9,15 +9,10 @@ PG_FUNCTION_INFO_V1(vec_stat_accum);
 Datum
 vec_stat_accum(PG_FUNCTION_ARGS)
 {
-  Oid elemTypeId;
-  int16 elemTypeWidth;
-  bool elemTypeByValue;
-  char elemTypeAlignmentCode;
   int currentLength;
   MemoryContext aggContext;
   VecAggAccumState *state;
   ArrayType *currentArray;
-  int arrayLength;
   Datum *currentVals;
   bool *currentNulls;
   int i;
@@ -40,26 +35,21 @@ vec_stat_accum(PG_FUNCTION_ARGS)
   transfn_fcinfo = NULL;
   
   if (state == NULL) {
-    elemTypeId = ARR_ELEMTYPE(currentArray);
     if (ARR_NDIM(currentArray) != 1) {
       ereport(ERROR, (errmsg("One-dimensional arrays are required")));
     }
-    arrayLength = (ARR_DIMS(currentArray))[0];
-    state = initVecAggAccumState(elemTypeId, aggContext, arrayLength);
-  } else {
-    elemTypeId = state->elementType;
-    arrayLength = state->nelems;
+    state = initVecAggAccumStateWithNulls(ARR_ELEMTYPE(currentArray), aggContext, (ARR_DIMS(currentArray))[0]);
   }
 
-  get_typlenbyvalalign(elemTypeId, &elemTypeWidth, &elemTypeByValue, &elemTypeAlignmentCode);
-  deconstruct_array(currentArray, elemTypeId, elemTypeWidth, elemTypeByValue, elemTypeAlignmentCode,
+  deconstruct_array(currentArray, state->astate->element_type,
+      state->astate->typlen, state->astate->typbyval, state->astate->typalign,
       &currentVals, &currentNulls, &currentLength);
-  if (currentLength != arrayLength) {
-    ereport(ERROR, (errmsg("All arrays must be the same length, but we got %d vs %d", currentLength, arrayLength)));
+  if (currentLength != state->astate->alen) {
+    ereport(ERROR, (errmsg("All arrays must be the same length, but we got %d vs %d", currentLength, state->astate->alen)));
   }
 
   // for each input element, delegate to 
-  for (i = 0; i < arrayLength; i++) {
+  for (i = 0; i < state->astate->alen; i++) {
     if (currentNulls[i]) {
       // do nothing: nulls can't change the result.
     } else {
@@ -72,7 +62,7 @@ vec_stat_accum(PG_FUNCTION_ARGS)
           transfn_fcinfo->args[0].isnull = true;
           transfn_fcinfo->args[1].isnull = false;
           
-          switch(elemTypeId) {
+          switch(state->astate->element_type) {
             // TODO: support other number types
             case NUMERICOID:
               // the numeric_avg_accum supports numeric_avg and numeric_sum final functions
@@ -85,22 +75,22 @@ vec_stat_accum(PG_FUNCTION_ARGS)
 
         // first non-null element set up as initial min/max values
         oldContext = MemoryContextSwitchTo(aggContext); {
-          state->vec_mins[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
-          state->vec_maxes[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
+          state->vec_mins[i].num = DatumGetNumericCopy(currentVals[i]);
+          state->vec_maxes[i].num = state->vec_mins[i].num;
         } MemoryContextSwitchTo(oldContext);
       } else {
         // execute delegate comparison function for min/max
-        switch(elemTypeId) {
+        switch(state->astate->element_type) {
           // TODO: support other number types
           case NUMERICOID:
-            if (DatumGetInt32(DirectFunctionCall2(numeric_cmp, state->vec_mins[i], currentVals[i])) > 0) {
+            if (DatumGetInt32(DirectFunctionCall2(numeric_cmp, NumericGetDatum(state->vec_mins[i].num), currentVals[i])) > 0) {
               oldContext = MemoryContextSwitchTo(aggContext); {
-                state->vec_mins[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
+                state->vec_mins[i].num = DatumGetNumericCopy(currentVals[i]);
               } MemoryContextSwitchTo(oldContext);
             }
-            if (DatumGetInt32(DirectFunctionCall2(numeric_cmp, state->vec_maxes[i], currentVals[i])) < 0) {
+            if (DatumGetInt32(DirectFunctionCall2(numeric_cmp, NumericGetDatum(state->vec_maxes[i].num), currentVals[i])) < 0) {
               oldContext = MemoryContextSwitchTo(aggContext); {
-                state->vec_maxes[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
+                state->vec_maxes[i].num = DatumGetNumericCopy(currentVals[i]);
               } MemoryContextSwitchTo(oldContext);
             }
             break;
@@ -120,7 +110,7 @@ vec_stat_accum(PG_FUNCTION_ARGS)
           ereport(ERROR, (errmsg("The delegate transition function returned a NULL aggregate state on element %d", i)));
         }
       } else {
-        switch(state->elementType) {
+        switch(state->astate->element_type) {
           // TODO: support other number types
           case NUMERICOID:
             state->vec_states[i] = DirectFunctionCall2(numeric_avg_accum, state->vec_states[i], currentVals[i]);
