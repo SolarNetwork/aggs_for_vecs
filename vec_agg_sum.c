@@ -8,9 +8,13 @@ PG_FUNCTION_INFO_V1(vec_agg_sum_finalfn);
 Datum
 vec_agg_sum_finalfn(PG_FUNCTION_ARGS)
 {
-  Datum result;
-  ArrayBuildState *result_build;
+  ArrayType *result;
   VecAggAccumState *state;
+  int16 typlen;
+  bool typbyval;
+  char typalign;
+  Datum *dvalues;
+  bool *dnulls;
   int dims[1];
   int lbs[1];
   int i;
@@ -20,25 +24,29 @@ vec_agg_sum_finalfn(PG_FUNCTION_ARGS)
     PG_RETURN_NULL();
   }
 
-  result_build = initArrayResultWithNulls(state->elementType, CurrentMemoryContext, state->nelems);
+  dvalues = palloc(state->nelems * sizeof(Datum));
+  dnulls = palloc(state->nelems * sizeof(bool));
 
   for (i = 0; i < state->nelems; i++) {
     if (state->vec_counts[i]) {
       switch(state->elementType) {
         // TODO: support other number types
         case NUMERICOID:
-            result_build->dvalues[i] = DirectFunctionCall1(numeric_sum, state->vec_states[i]);
+            dvalues[i] = DirectFunctionCall1(numeric_sum, state->vec_states[i]);
             break;
         default:
             elog(ERROR, "Unknown array element type");
       }
-      result_build->dnulls[i] = false;
+      dnulls[i] = false;
+    } else {
+      dnulls[i] = true;
     }
   }
 
-  dims[0] = result_build->nelems;
+  dims[0] = state->nelems;
   lbs[0] = 1;
 
-  result = makeMdArrayResult(result_build, 1, dims, lbs, CurrentMemoryContext, false);
-  PG_RETURN_DATUM(result);
+  get_typlenbyvalalign(state->elementType, &typlen, &typbyval, &typalign);
+  result = construct_md_array(dvalues, dnulls, 1, dims, lbs, state->elementType, typlen, typbyval, typalign);  
+  PG_RETURN_ARRAYTYPE_P(result);
 }
