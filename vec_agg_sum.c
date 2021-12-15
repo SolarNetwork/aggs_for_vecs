@@ -33,6 +33,7 @@ vec_agg_sum_finalfn(PG_FUNCTION_ARGS)
         // TODO: support other number types
         case NUMERICOID:
             dvalues[i] = DirectFunctionCall1(numeric_sum, state->vec_states[i]);
+            ereport(NOTICE, (errmsg("sum %d = %s", i, DatumGetCString(DirectFunctionCall1(numeric_out, dvalues[i])))));
             break;
         default:
             elog(ERROR, "Unknown array element type");
