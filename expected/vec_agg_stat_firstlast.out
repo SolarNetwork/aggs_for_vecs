@@ -1,0 +1,63 @@
+-- first/last stats int2
+SELECT vec_agg_first(smallints ORDER BY sensor_id) AS firsts
+	, vec_agg_last(smallints ORDER BY sensor_id) AS lasts
+FROM measurements;
+ firsts  |  lasts  
+---------+---------
+ {1,2,3} | {1,1,4}
+(1 row)
+
+-- first/last stats int4
+SELECT vec_agg_first(ints ORDER BY sensor_id) AS firsts
+	, vec_agg_last(ints ORDER BY sensor_id) AS lasts
+FROM measurements;
+ firsts  |  lasts  
+---------+---------
+ {1,2,3} | {1,1,4}
+(1 row)
+
+-- first/last stats int8
+SELECT vec_agg_first(bigints ORDER BY sensor_id) AS firsts
+	, vec_agg_last(bigints ORDER BY sensor_id) AS lasts
+FROM measurements;
+ firsts  |  lasts  
+---------+---------
+ {1,2,3} | {1,1,4}
+(1 row)
+
+-- first/last stats float4
+SELECT vec_agg_first(reals ORDER BY sensor_id) AS firsts
+	, vec_agg_last(reals ORDER BY sensor_id) AS lasts
+FROM measurements;
+ firsts  |  lasts  
+---------+---------
+ {1,2,3} | {1,1,4}
+(1 row)
+
+-- first/last stats float8
+SELECT vec_agg_first(floats ORDER BY sensor_id) AS firsts
+	, vec_agg_last(floats ORDER BY sensor_id) AS lasts
+FROM measurements;
+ firsts  |  lasts  
+---------+---------
+ {1,2,3} | {1,1,4}
+(1 row)
+
+-- first/last stats numeric
+SELECT vec_agg_first(nums ORDER BY sensor_id) AS firsts
+	, vec_agg_last(nums ORDER BY sensor_id) AS lasts
+FROM measurements;
+      firsts      |      lasts       
+------------------+------------------
+ {1.23,2.34,3.45} | {1.23,1.23,4.56}
+(1 row)
+
+-- first/last stats numeric 2
+SELECT vec_agg_first(data_i ORDER BY ts) AS firsts
+	, vec_agg_last(data_i ORDER BY ts) AS lasts
+FROM measurements2;
+                                firsts                                |                             lasts                             
+----------------------------------------------------------------------+---------------------------------------------------------------
+ {31,-1.348291,228.79181,49.664787,3021,0.99999994,-23.358469,3021,1} | {7222,-24.502656,229.46155,50.32881,4376,1,-294.77994,4376,0}
+(1 row)
+

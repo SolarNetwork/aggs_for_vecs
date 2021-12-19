@@ -14,6 +14,7 @@ REGRESS = setup \
 					vec_pow \
 					vec_sub \
 					vec_agg_stat \
+					vec_agg_stat_firstlast \
 					vec_to_count \
 					vec_to_max \
 					vec_to_mean \

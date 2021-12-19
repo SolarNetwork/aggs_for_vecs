@@ -1648,3 +1648,155 @@ CREATE AGGREGATE vec_agg_sum(numeric[]) (
   stype     = internal,
   finalfunc = vec_agg_sum_numeric_finalfn
 );
+
+
+
+-- vec_agg_first
+
+CREATE OR REPLACE FUNCTION
+vec_agg_first_int2_finalfn(internal)
+RETURNS smallint[]
+AS 'aggs_for_vecs', 'vec_agg_first_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_first_int4_finalfn(internal)
+RETURNS int[]
+AS 'aggs_for_vecs', 'vec_agg_first_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_first_int8_finalfn(internal)
+RETURNS bigint[]
+AS 'aggs_for_vecs', 'vec_agg_first_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_first_float4_finalfn(internal)
+RETURNS real[]
+AS 'aggs_for_vecs', 'vec_agg_first_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_first_float8_finalfn(internal)
+RETURNS float[]
+AS 'aggs_for_vecs', 'vec_agg_first_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_first_numeric_finalfn(internal)
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_first_finalfn'
+LANGUAGE c;
+
+CREATE AGGREGATE vec_agg_first(smallint[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_first_int2_finalfn
+);
+
+CREATE AGGREGATE vec_agg_first(int[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_first_int4_finalfn
+);
+
+CREATE AGGREGATE vec_agg_first(bigint[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_first_int8_finalfn
+);
+
+CREATE AGGREGATE vec_agg_first(real[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_first_float4_finalfn
+);
+
+CREATE AGGREGATE vec_agg_first(float[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_first_float8_finalfn
+);
+
+CREATE AGGREGATE vec_agg_first(numeric[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_first_numeric_finalfn
+);
+
+
+
+-- vec_agg_last
+
+CREATE OR REPLACE FUNCTION
+vec_agg_last_int2_finalfn(internal)
+RETURNS smallint[]
+AS 'aggs_for_vecs', 'vec_agg_last_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_last_int4_finalfn(internal)
+RETURNS int[]
+AS 'aggs_for_vecs', 'vec_agg_last_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_last_int8_finalfn(internal)
+RETURNS bigint[]
+AS 'aggs_for_vecs', 'vec_agg_last_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_last_float4_finalfn(internal)
+RETURNS real[]
+AS 'aggs_for_vecs', 'vec_agg_last_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_last_float8_finalfn(internal)
+RETURNS float[]
+AS 'aggs_for_vecs', 'vec_agg_last_finalfn'
+LANGUAGE c;
+
+CREATE OR REPLACE FUNCTION
+vec_agg_last_numeric_finalfn(internal)
+RETURNS numeric[]
+AS 'aggs_for_vecs', 'vec_agg_last_finalfn'
+LANGUAGE c;
+
+CREATE AGGREGATE vec_agg_last(smallint[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_last_int2_finalfn
+);
+
+CREATE AGGREGATE vec_agg_last(int[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_last_int4_finalfn
+);
+
+CREATE AGGREGATE vec_agg_last(bigint[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_last_int8_finalfn
+);
+
+CREATE AGGREGATE vec_agg_last(real[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_last_float4_finalfn
+);
+
+CREATE AGGREGATE vec_agg_last(float[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_last_float8_finalfn
+);
+
+CREATE AGGREGATE vec_agg_last(numeric[]) (
+  sfunc     = vec_stat_accum,
+  stype     = internal,
+  finalfunc = vec_agg_last_numeric_finalfn
+);

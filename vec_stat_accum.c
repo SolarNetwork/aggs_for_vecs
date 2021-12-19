@@ -106,7 +106,6 @@ vec_stat_accum(PG_FUNCTION_ARGS)
       // do nothing: nulls can't change the result.
     } else {
       if (!state->vec_counts[i]) {
-        // first call to delegate aggregate transition, so must init transfn_fcinfo if not already
         switch(elemTypeId) {
           case INT2OID:
           case INT4OID:
@@ -145,13 +144,20 @@ vec_stat_accum(PG_FUNCTION_ARGS)
             elog(ERROR, "Unknown array element type");
         }
 
-        // first non-null element set up as initial min/max values
+        // first non-null element set up as initial min/max values and first/last
         oldContext = MemoryContextSwitchTo(aggContext); {
           state->vec_mins[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
           state->vec_maxes[i] = state->vec_mins[i];
+          state->vec_firsts[i] = state->vec_mins[i];
+          state->vec_lasts[i] = state->vec_lasts[i];
         } MemoryContextSwitchTo(oldContext);
       } else {
         FC_NULL(state->transfn_fcinfo, 0) = false;
+
+        // track last
+          oldContext = MemoryContextSwitchTo(aggContext); {
+            state->vec_lasts[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
+          } MemoryContextSwitchTo(oldContext);
 
         // execute delegate comparison function for min
         FC_ARG(state->cmp_fcinfo, 0) = state->vec_mins[i];
@@ -162,9 +168,7 @@ vec_stat_accum(PG_FUNCTION_ARGS)
           // delegate function returned no result
           ereport(ERROR, (errmsg("The delegate comparison function returned a NULL result on element %d", i)));
         } else if (DatumGetInt32(compareResult) > 0) {
-          oldContext = MemoryContextSwitchTo(aggContext); {
-            state->vec_mins[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
-          } MemoryContextSwitchTo(oldContext);
+          state->vec_mins[i] = state->vec_lasts[i];
         }
 
         // execute delegate comparison function for max
@@ -176,9 +180,7 @@ vec_stat_accum(PG_FUNCTION_ARGS)
           // delegate function returned no result
           ereport(ERROR, (errmsg("The delegate comparison function returned a NULL result on element %d", i)));
         } else if (DatumGetInt32(compareResult) < 0) {
-          oldContext = MemoryContextSwitchTo(aggContext); {
-            state->vec_maxes[i] = datumCopy(currentVals[i], elemTypeByValue, elemTypeWidth);
-          } MemoryContextSwitchTo(oldContext);
+          state->vec_maxes[i] = state->vec_lasts[i];
         }
       }
       

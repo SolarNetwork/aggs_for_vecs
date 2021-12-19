@@ -5,6 +5,8 @@ typedef struct VecAggAccumState {
   Datum           *vec_states;     // Element aggregate state.
   Datum           *vec_mins;       // Element min value seen.
   Datum           *vec_maxes;      // Element max value seen.
+  Datum           *vec_firsts;     // Element first value seen.
+  Datum           *vec_lasts;      // Element last value seen.
   FunctionCallInfo transfn_fcinfo; // Cached function call for invoking aggregate function.
   FunctionCallInfo cmp_fcinfo;     // Cached function call for invoking comparison function.
 } VecAggAccumState;
@@ -23,6 +25,8 @@ initVecAggAccumState(Oid element_type, MemoryContext rcontext, int nelems) {
   astate->vec_states = (Datum *)MemoryContextAlloc(rcontext, nelems * sizeof(Datum));
   astate->vec_mins = (Datum *)MemoryContextAlloc(rcontext, nelems * sizeof(Datum));
   astate->vec_maxes = (Datum *)MemoryContextAlloc(rcontext, nelems * sizeof(Datum));
+  astate->vec_firsts = (Datum *)MemoryContextAlloc(rcontext, nelems * sizeof(Datum));
+  astate->vec_lasts = (Datum *)MemoryContextAlloc(rcontext, nelems * sizeof(Datum));
   
   return astate;
 }
