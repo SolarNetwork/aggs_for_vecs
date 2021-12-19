@@ -26,18 +26,20 @@ vec_agg_first_finalfn(PG_FUNCTION_ARGS)
 
   dvalues = palloc(state->nelems * sizeof(Datum));
   dnulls = palloc(state->nelems * sizeof(bool));
+  get_typlenbyvalalign(state->elementType, &typlen, &typbyval, &typalign);
 
   for (i = 0; i < state->nelems; i++) {
     if (state->vec_counts[i]) {
-      dvalues[i] = state->vec_firsts[i]; // TODO: need copy?
+      dvalues[i] = datumCopy(state->vec_firsts[i], typbyval, typlen);
       dnulls[i] = false;
+    } else {
+      dnulls[i] = true;
     }
   }
 
   dims[0] = state->nelems;
   lbs[0] = 1;
 
-  get_typlenbyvalalign(state->elementType, &typlen, &typbyval, &typalign);
   result = construct_md_array(dvalues, dnulls, 1, dims, lbs, state->elementType, typlen, typbyval, typalign);  
   PG_RETURN_ARRAYTYPE_P(result);
 }

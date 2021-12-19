@@ -26,11 +26,14 @@ vec_agg_last_finalfn(PG_FUNCTION_ARGS)
 
   dvalues = palloc(state->nelems * sizeof(Datum));
   dnulls = palloc(state->nelems * sizeof(bool));
+  get_typlenbyvalalign(state->elementType, &typlen, &typbyval, &typalign);
 
   for (i = 0; i < state->nelems; i++) {
     if (state->vec_counts[i]) {
-      dvalues[i] = state->vec_lasts[i]; // TODO: need copy?
+      dvalues[i] = datumCopy(state->vec_lasts[i], typbyval, typlen);
       dnulls[i] = false;
+    } else {
+      dnulls[i] = true;
     }
   }
 
